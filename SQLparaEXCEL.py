@@ -65,7 +65,7 @@ def export_mysql_table_to_excel(table_name_to_export, output_excel_name, db_conf
 
     except mysql.connector.Error as err:
         print(f"Erro no MySQL: {err}")
-        if err.errno == 1146: # ER_NO_SUCH_TABLE
+        if err.errno == 1146:
             print(f"A tabela '{table_name_to_export}' não existe no banco de dados '{db_config['database']}'.")
     except Exception as e:
         print(f"Ocorreu um erro inesperado: {e}")
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     # Definimos o nome da tabela no MySQL que queremos exportar
     table_to_export = "tabela_teste"
     # Definimos o nome do arquivo Excel de saída
-    output_excel_filename = "teste_dos_testes.xlsx"
+    output_excel_filename = "tabela_exportada.xlsx"
 
     print(f"\n--- Exportando a tabela '{table_to_export}' para '{output_excel_filename}' ---")
     export_mysql_table_to_excel(table_to_export, output_excel_filename, db_config)

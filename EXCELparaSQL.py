@@ -15,7 +15,7 @@ def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
                                     será derivado do nome do arquivo Excel.
     """
     try:
-        # 1. Leitura do arquivo Excel
+        # Leitura do arquivo Excel
         if not os.path.exists(excel_file_path):
             raise FileNotFoundError(f"O arquivo Excel não foi encontrado: {excel_file_path}")
 
@@ -36,33 +36,31 @@ def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
         
         print(f"Nome da tabela MySQL a ser criada/atualizada: '{table_name}'")
 
-        # 2. Conexão ao banco de dados MySQL
+        # Conexão ao banco de dados MySQL
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
         print("Conectado ao banco de dados MySQL.")
 
-        # 3. Mapeamento de tipos de dados Pandas para MySQL e geração da instrução CREATE TABLE
+        # Mapeamento de tipos de dados Pandas para MySQL e geração da instrução CREATE TABLE
         column_definitions = []
         # Adicionar uma coluna de ID auto-incrementável por padrão
         column_definitions.append("id INT PRIMARY KEY AUTO_INCREMENT")
 
         for column, dtype in df.dtypes.items():
-            column_name_sql = column.lower().replace(" ", "_").replace("-", "_") # Normaliza nome da coluna
-            sql_type = "VARCHAR(255)" # Tipo padrão caso não seja reconhecido
+            column_name_sql = column.lower().replace(" ", "_").replace("-", "_") # Normalizar nome da coluna
+            sql_type = "VARCHAR(255)" # Tipo padrão caso não seja reconhecido outro tipo
 
             if pd.api.types.is_integer_dtype(dtype):
                 sql_type = "INT"
             elif pd.api.types.is_float_dtype(dtype) or pd.api.types.is_numeric_dtype(dtype):
-                sql_type = "DECIMAL(18, 4)" # Genérico para números com casas decimais
+                sql_type = "DECIMAL(18, 4)"
             elif pd.api.types.is_datetime64_any_dtype(dtype):
-                sql_type = "DATETIME" # DATETIME para flexibilidade com horas
+                sql_type = "DATETIME"
                 # Convertendo para datetime se ainda não for e preenchendo NaT com valor padrão
                 df[column] = pd.to_datetime(df[column], errors='coerce')
-                # df[column] = df[column].fillna(pd.Timestamp('1900-01-01 00:00:00')) # Opcional: preencher nulos com data padrão
                 # Para MySQL, DATETIME pode aceitar NULL, então o preenchimento é opcional e depende do requisito.
             elif pd.api.types.is_bool_dtype(dtype):
                 sql_type = "BOOLEAN"
-            # Adicione mais mapeamentos conforme a necessidade, ex: TEXT para strings muito longas
 
             # Evita duplicar a coluna 'id' se ela já existir no Excel e for mapeada
             if column_name_sql != 'id':
@@ -75,7 +73,7 @@ def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
         conn.commit()
         print(f"Tabela '{table_name}' verificada/criada com sucesso.")
 
-        # 4. Inserção de Dados
+        # Inserção de Dados
         # Remove a coluna 'id' do DataFrame se ela existir, pois ela é auto-incrementável
         if 'id' in df.columns:
             df = df.drop(columns=['id'])
@@ -94,7 +92,7 @@ def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
             row_values = []
             for col in df.columns:
                 value = row[col]
-                if pd.isna(value): # Trata NaN/NaT para NULL
+                if pd.isna(value):
                     row_values.append(None)
                 elif pd.api.types.is_datetime64_any_dtype(df[col]):
                     # Converte Timestamp do pandas para string no formato MySQL
@@ -111,9 +109,9 @@ def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
         print(f"Erro: {e}")
     except mysql.connector.Error as err:
         print(f"Erro no MySQL: {err}")
-        if err.errno == 1054: # ER_BAD_FIELD_ERROR
+        if err.errno == 1054:
             print("Verifique se os nomes das colunas no seu Excel correspondem aos esperados ou se há um erro de digitação.")
-        elif err.errno == 1146: # ER_NO_SUCH_TABLE
+        elif err.errno == 1146:
             print("A tabela não existe. Ela deveria ter sido criada automaticamente.")
     except Exception as e:
         print(f"Ocorreu um erro inesperado: {e}")
@@ -128,13 +126,13 @@ def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
 if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.realpath(__file__))
 
-    # Exemplo para o novo arquivo de teste
-    excel_file_test = os.path.join(current_dir, "cotas_produtos.xlsx")
+    # Exemplo para o novo arquivo de teste (obs: substituir "tabela_teste" para o nome do arquivo)
+    excel_file_test = os.path.join(current_dir, "tabela_teste.xlsx")
 
     db_config = {
         "host": "localhost",
         "user": "root",
-        "password": "", # Deixe em branco se não houver senha
+        "password": "",
         "database": "sistema_teste"
     }
 
