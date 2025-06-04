@@ -1,47 +1,145 @@
-import mysql.connector # type: ignore
+import mysql.connector
 import pandas as pd
 import os
 
-current_dir = os.path.dirname(os.path.realpath(__file__))
-excel_file = os.path.join(current_dir, "cotas_produtos.xlsx")
+def import_excel_to_mysql(excel_file_path, db_config, table_name=None):
+    """
+    Importa dados de uma planilha Excel para um banco de dados MySQL,
+    criando a tabela dinamicamente com base nas colunas do Excel.
 
-df = pd.read_excel(excel_file)
+    Args:
+        excel_file_path (str): O caminho completo para o arquivo Excel.
+        db_config (dict): Um dicionário com as configurações de conexão do MySQL
+                          (host, user, password, database).
+        table_name (str, optional): O nome da tabela no MySQL. Se None, o nome
+                                    será derivado do nome do arquivo Excel.
+    """
+    try:
+        # 1. Leitura do arquivo Excel
+        if not os.path.exists(excel_file_path):
+            raise FileNotFoundError(f"O arquivo Excel não foi encontrado: {excel_file_path}")
 
-df['data_cotacao'] = pd.to_datetime(df['data_cotacao'], errors='coerce')
-df['data_cotacao'] = df['data_cotacao'].fillna(pd.Timestamp('1900-01-01'))
-df['data_cotacao'] = df['data_cotacao'].dt.strftime('%Y-%m-%d')
+        print(f"Lendo o arquivo Excel: {excel_file_path}")
+        df = pd.read_excel(excel_file_path)
+        print(f"Planilha '{os.path.basename(excel_file_path)}' lida com sucesso. {len(df)} linhas encontradas.")
 
-conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",
-    database="sistema_teste"
-)
+        if df.empty:
+            print("O DataFrame está vazio. Nenhuns dados para importar.")
+            return
 
-cursor = conn.cursor()
+        # Determinar o nome da tabela no MySQL
+        if table_name is None:
+            # Pega o nome do arquivo sem a extensão e usa como nome da tabela
+            table_name = os.path.splitext(os.path.basename(excel_file_path))[0]
+            # Normaliza o nome para ser um nome de tabela SQL válido (e.g., espaços para underscores)
+            table_name = table_name.lower().replace(" ", "_").replace("-", "_")
+        
+        print(f"Nome da tabela MySQL a ser criada/atualizada: '{table_name}'")
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS totalidade_produtos (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    produto_id INT,
-    nome_produto VARCHAR(255),
-    categoria_produto VARCHAR(255),
-    preco_unitario DECIMAL(10, 2),
-    quantidade INT,
-    data_cotacao DATE,
-    preco_total DECIMAL(10, 2)
-)
-""")
+        # 2. Conexão ao banco de dados MySQL
+        conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
+        print("Conectado ao banco de dados MySQL.")
 
-for _, row in df.iterrows():
-    cursor.execute("""
-    INSERT INTO totalidade_produtos (produto_id, nome_produto, categoria_produto, preco_unitario, quantidade, data_cotacao, preco_total)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """, (row['produto_id'], row['nome_produto'], row['categoria_produto'], row['preco_unitario'], row['quantidade'], row['data_cotacao'], row['preco_total']))
+        # 3. Mapeamento de tipos de dados Pandas para MySQL e geração da instrução CREATE TABLE
+        column_definitions = []
+        # Adicionar uma coluna de ID auto-incrementável por padrão
+        column_definitions.append("id INT PRIMARY KEY AUTO_INCREMENT")
 
-conn.commit()
+        for column, dtype in df.dtypes.items():
+            column_name_sql = column.lower().replace(" ", "_").replace("-", "_") # Normaliza nome da coluna
+            sql_type = "VARCHAR(255)" # Tipo padrão caso não seja reconhecido
 
-cursor.close()
-conn.close()
+            if pd.api.types.is_integer_dtype(dtype):
+                sql_type = "INT"
+            elif pd.api.types.is_float_dtype(dtype) or pd.api.types.is_numeric_dtype(dtype):
+                sql_type = "DECIMAL(18, 4)" # Genérico para números com casas decimais
+            elif pd.api.types.is_datetime64_any_dtype(dtype):
+                sql_type = "DATETIME" # DATETIME para flexibilidade com horas
+                # Convertendo para datetime se ainda não for e preenchendo NaT com valor padrão
+                df[column] = pd.to_datetime(df[column], errors='coerce')
+                # df[column] = df[column].fillna(pd.Timestamp('1900-01-01 00:00:00')) # Opcional: preencher nulos com data padrão
+                # Para MySQL, DATETIME pode aceitar NULL, então o preenchimento é opcional e depende do requisito.
+            elif pd.api.types.is_bool_dtype(dtype):
+                sql_type = "BOOLEAN"
+            # Adicione mais mapeamentos conforme a necessidade, ex: TEXT para strings muito longas
 
-print("Dados importados com sucesso!")
+            # Evita duplicar a coluna 'id' se ela já existir no Excel e for mapeada
+            if column_name_sql != 'id':
+                column_definitions.append(f"{column_name_sql} {sql_type}")
+            
+        create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(column_definitions)})"
+        
+        print(f"\nTentando criar/verificar tabela: {create_table_query}")
+        cursor.execute(create_table_query)
+        conn.commit()
+        print(f"Tabela '{table_name}' verificada/criada com sucesso.")
+
+        # 4. Inserção de Dados
+        # Remove a coluna 'id' do DataFrame se ela existir, pois ela é auto-incrementável
+        if 'id' in df.columns:
+            df = df.drop(columns=['id'])
+
+        # Prepara a instrução INSERT dinamicamente
+        columns_to_insert = [col.lower().replace(" ", "_").replace("-", "_") for col in df.columns]
+        placeholders = ', '.join(['%s'] * len(columns_to_insert))
+        insert_query = f"INSERT INTO {table_name} ({', '.join(columns_to_insert)}) VALUES ({placeholders})"
+        
+        print(f"\nIniciando importação de {len(df)} linhas para '{table_name}'...")
+        
+        # Converte o DataFrame para uma lista de tuplas para inserção em massa
+        # Trata valores de data/hora para o formato que o MySQL espera (string 'YYYY-MM-DD HH:MM:SS')
+        data_to_insert = []
+        for index, row in df.iterrows():
+            row_values = []
+            for col in df.columns:
+                value = row[col]
+                if pd.isna(value): # Trata NaN/NaT para NULL
+                    row_values.append(None)
+                elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                    # Converte Timestamp do pandas para string no formato MySQL
+                    row_values.append(value.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(value) else None)
+                else:
+                    row_values.append(value)
+            data_to_insert.append(tuple(row_values))
+
+        cursor.executemany(insert_query, data_to_insert)
+        conn.commit()
+        print(f"Dados importados com sucesso para a tabela '{table_name}'! Total de {cursor.rowcount} registros inseridos.")
+
+    except FileNotFoundError as e:
+        print(f"Erro: {e}")
+    except mysql.connector.Error as err:
+        print(f"Erro no MySQL: {err}")
+        if err.errno == 1054: # ER_BAD_FIELD_ERROR
+            print("Verifique se os nomes das colunas no seu Excel correspondem aos esperados ou se há um erro de digitação.")
+        elif err.errno == 1146: # ER_NO_SUCH_TABLE
+            print("A tabela não existe. Ela deveria ter sido criada automaticamente.")
+    except Exception as e:
+        print(f"Ocorreu um erro inesperado: {e}")
+    finally:
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+        if 'conn' in locals() and conn:
+            conn.close()
+        print("Conexão com o banco de dados fechada.")
+
+# --- Configurações e Execução ---
+if __name__ == "__main__":
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+
+    # Exemplo para o novo arquivo de teste
+    excel_file_test = os.path.join(current_dir, "cotas_produtos.xlsx")
+
+    db_config = {
+        "host": "localhost",
+        "user": "root",
+        "password": "", # Deixe em branco se não houver senha
+        "database": "sistema_teste"
+    }
+
+    print("\n--- Importando ---")
+    # Chame a função de importação para o seu novo arquivo
+    import_excel_to_mysql(excel_file_test, db_config)
+
+    print("\nProcesso de importação concluído.")
