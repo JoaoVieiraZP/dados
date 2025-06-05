@@ -17,12 +17,13 @@ def export_mysql_table_to_excel(table_name_to_export, output_excel_name, db_conf
     current_dir = os.path.dirname(os.path.realpath(__file__))
     excel_file = os.path.join(current_dir, output_excel_name)
 
-    conn = None # Inicializa conn para o bloco finally
+    conn = None 
+    cursor = None 
     try:
         conn = mysql.connector.connect(**db_config)
+        cursor = conn.cursor()
         print(f"Conectado ao banco de dados '{db_config['database']}'.")
 
-        # Query para selecionar todos os dados da tabela escolhida
         query = f"SELECT * FROM {table_name_to_export};"
         print(f"Executando query: {query}")
 
@@ -33,11 +34,9 @@ def export_mysql_table_to_excel(table_name_to_export, output_excel_name, db_conf
             print(f"A tabela '{table_name_to_export}' está vazia. Nenhum dado para exportar para Excel.")
             return
 
-        # Exportar para Excel
         df.to_excel(excel_file, index=False)
         print(f"Dados exportados para '{excel_file}'. Iniciando ajustes de formatação...")
 
-        # Ajustes de formatação com openpyxl
         wb = openpyxl.load_workbook(excel_file)
         sheet = wb.active
 
@@ -46,17 +45,13 @@ def export_mysql_table_to_excel(table_name_to_export, output_excel_name, db_conf
             column_letter = col[0].column_letter
             for cell in col:
                 try:
-                    # Converte para string antes de calcular o comprimento
                     cell_value_str = str(cell.value) if cell.value is not None else ""
                     if len(cell_value_str) > max_length:
                         max_length = len(cell_value_str)
-                    # Alinha todas as células à direita
-                    cell.alignment = Alignment(horizontal="right")
+                    cell.alignment = Alignment(horizontal="right") 
                 except Exception as e:
-                    # Captura qualquer erro durante o processamento da célula
-                    pass # Apenas ignora e continua
+                    pass 
 
-            # +2 para um pequeno padding
             adjusted_width = (max_length + 2)
             sheet.column_dimensions[column_letter].width = adjusted_width
 
@@ -65,30 +60,13 @@ def export_mysql_table_to_excel(table_name_to_export, output_excel_name, db_conf
 
     except mysql.connector.Error as err:
         print(f"Erro no MySQL: {err}")
-        if err.errno == 1146:
-            print(f"A tabela '{table_name_to_export}' não existe no banco de dados '{db_config['database']}'.")
+        raise 
     except Exception as e:
         print(f"Ocorreu um erro inesperado: {e}")
+        raise 
     finally:
+        if cursor: 
+            cursor.close()
         if conn:
             conn.close()
-            print("Conexão com o banco de dados fechada.")
-
-# --- Configurações e Execução ---
-if __name__ == "__main__":
-    db_config = {
-        "host": "localhost",
-        "user": "root",
-        "password": "", # Deixe em branco se não houver senha
-        "database": "sistema_teste"
-    }
-
-    # Definimos o nome da tabela no MySQL que queremos exportar
-    table_to_export = "tabela_teste"
-    # Definimos o nome do arquivo Excel de saída
-    output_excel_filename = "tabela_exportada.xlsx"
-
-    print(f"\n--- Exportando a tabela '{table_to_export}' para '{output_excel_filename}' ---")
-    export_mysql_table_to_excel(table_to_export, output_excel_filename, db_config)
-
-    print("\nProcesso de exportação concluído.")
+        print("Conexão com o banco de dados fechada.")
