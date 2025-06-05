@@ -1,54 +1,110 @@
-Sincronização Flexível entre MySQL e Excel
-Este projeto oferece um conjunto de scripts Python projetados para facilitar a sincronização bidirecional e dinâmica entre um banco de dados MySQL e arquivos Excel. Ele permite que você extraia dados de qualquer tabela do seu MySQL para uma planilha Excel e, inversamente, importe dados de qualquer planilha Excel para uma nova tabela no seu banco de dados.
+# Sincronizador MySQL & Excel
 
-1. Script de Exportação: export_mysql_to_excel.py
-Este script foi aprimorado para ser genérico, permitindo que você exporte qualquer tabela do seu banco de dados MySQL para um arquivo Excel com formatação automática.
+## Visão Geral do Projeto
 
-Funcionalidades:
-Conexão Dinâmica ao Banco de Dados: Conecta-se a um banco de dados MySQL (configurado para sistema_teste por padrão) usando credenciais configuráveis.
-Exportação de Tabela Flexível: Você pode especificar o nome de qualquer tabela existente no seu banco de dados. O script constrói dinamicamente a consulta SELECT * FROM nome_da_tabela; para extrair todos os dados dela.
-Processamento e Exportação: Os dados da tabela selecionada são lidos para um DataFrame do pandas.
-Geração de Arquivo Excel Formatado: Os dados são exportados para um arquivo Excel com o nome que você definir. O script utiliza openpyxl para ajustar automaticamente a largura das colunas e alinhar o conteúdo à direita, garantindo uma visualização limpa e profissional.
-Como Usar:
-Salve o código do script de exportação como export_mysql_to_excel.py.
+Este projeto oferece um conjunto de scripts Python projetados para facilitar a **sincronização bidirecional e dinâmica entre um banco de dados MySQL e arquivos Excel**. Ele permite que você extraia dados de qualquer tabela do seu MySQL para uma planilha Excel e, inversamente, importe dados de qualquer planilha Excel para uma nova tabela no seu banco de dados.
 
-Configure suas credenciais MySQL no bloco db_config no final do arquivo.
+Com uma interface gráfica (GUI) moderna e intuitiva, o aplicativo elimina a necessidade de conhecimentos de programação para realizar essas tarefas de integração de dados.
 
-No bloco if __name__ == "__main__":, especifique a tabela MySQL que deseja exportar e o nome do arquivo Excel de saída.
+## Funcionalidades Principais
 
-Python
+* **Interface Gráfica (GUI) Moderna:** Desenvolvida com `CustomTkinter` para uma experiência de usuário intuitiva e visualmente atraente.
+* **Importação Flexível (Excel para MySQL):**
+    * Lê dados de **qualquer arquivo Excel (.xlsx/.xls)**.
+    * **Criação Dinâmica de Tabela:** Gera automaticamente uma nova tabela no MySQL com base nas colunas e tipos de dados do Excel, se ela não existir.
+    * **Modos de Importação:** Escolha entre "Adicionar (Append)" para incluir novos registros ou "Sobrescrever (Truncate & Insert)" para limpar a tabela existente e inserir os novos dados.
+* **Exportação Flexível (MySQL para Excel):**
+    * Exporta dados de **qualquer tabela existente no MySQL** para um arquivo Excel.
+    * **Seleção de Tabela:** O aplicativo lista automaticamente as tabelas disponíveis no banco de dados para fácil seleção.
+    * **Formatação Automática:** O arquivo Excel gerado tem as larguras das colunas e o alinhamento ajustados para melhor legibilidade.
+* **Persistência de Configurações:** Salva e carrega automaticamente as credenciais de conexão do MySQL para uso futuro, otimizando o fluxo de trabalho.
+* **Feedback em Tempo Real:** Barra de status com mensagens coloridas e desativação de botões durante as operações para uma melhor experiência do usuário.
+* **Processamento em Segundo Plano:** Utiliza threads para que a interface gráfica permaneça responsiva durante operações demoradas.
 
-# Exemplo de uso:
-export_mysql_table_to_excel("nome_da_sua_tabela", "nome_do_arquivo_saida.xlsx", db_config)
-Execute o script a partir do seu terminal (preferencialmente Anaconda Prompt se você usa Conda) com python export_mysql_to_excel.py.
+## Tecnologias Utilizadas
 
-2. Script de Importação: import_excel_to_mysql.py
-Este script foi modificado para ser altamente flexível, permitindo que você importe dados de qualquer arquivo Excel e crie uma nova tabela no MySQL com base na estrutura da planilha.
+* **Python 3.9+** (Linguagem de Programação)
+* **`CustomTkinter`**: Para a criação da interface gráfica moderna.
+* **`pandas`**: Para leitura, manipulação e exportação eficiente de dados tabulares.
+* **`mysql-connector-python`**: Para conexão e interação com o banco de dados MySQL.
+* **`openpyxl`**: Para manipulação e estilização de arquivos Excel.
+* **`threading`**: Para operações assíncronas e interface responsiva.
+* **`json`**: Para persistência de configurações.
 
-Funcionalidades:
-Leitura Dinâmica de Arquivos Excel: Lê dados de qualquer arquivo .xlsx que você especificar.
-Criação de Tabela Dinâmica no MySQL:
-Inspeciona as colunas e os tipos de dados do arquivo Excel.
-Gera automaticamente uma instrução SQL CREATE TABLE IF NOT EXISTS com base nessas informações, criando uma nova tabela no MySQL.
-Mapeia os tipos de dados do pandas (inferidos do Excel) para os tipos de dados correspondentes no MySQL (ex: inteiros para INT, números decimais para DECIMAL, datas para DATETIME, textos para VARCHAR).
-Adiciona uma chave primária auto-incrementável (id INT PRIMARY KEY AUTO_INCREMENT) por padrão.
-Tratamento de Dados: Converte datas e valores ausentes (NaN/NaT) para formatos compatíveis com MySQL (NULL ou data padrão).
-Inserção Otimizada de Dados: Insere todos os dados do Excel na tabela MySQL recém-criada de forma eficiente, usando executemany para múltiplas inserções.
-Como Usar:
-Salve o código do script de importação como import_excel_to_mysql.py.
+## Estrutura do Projeto
 
-Configure suas credenciais MySQL no bloco db_config no final do arquivo.
+my-project-name/
+├── .git/                  # Metadados do Git
+├── dist/
+│   ├── app_gui.exe        # Executável do aplicativo
+│   ├── db_config.json     # Configuração da conexão com o banco de dados
+│   ├── tabela_teste.xlsx  # Tabela para teste 1
+│   └── tabela_teste2.xlsx # Tabela para teste 2
+├── examples/              # Arquivos Excel de exemplo para teste
+│   ├── tabela_teste.xlsx  # Tabela para teste
+│   └── tabela_teste2.xlsx # Tabela para teste 2
+├── src/                   # Contém todo o código fonte Python da aplicação
+│   ├── app_gui.py         # Script principal da interface gráfica
+│   ├── db_config.json     # Configuração da conexão com o banco de dados
+│   ├── EXCELparaSQL.py    # Lógica de importação de Excel para MySQL
+│   └── SQLparaEXCEL.py    # Lógica de exportação de MySQL para Excel
+├── README.md              # Este arquivo
 
-No bloco if __name__ == "__main__":, especifique o caminho para o seu arquivo Excel de entrada.
 
-Python
+## Como Usar o Aplicativo (Para Usuários Finais - Sem Python)
 
-# Exemplo de uso:
-excel_file_path = os.path.join(current_dir, "seu_arquivo_excel.xlsx")
-import_excel_to_mysql(excel_file_path, db_config)
-# Você também pode opcionalmente definir um nome de tabela específico no MySQL:
-# import_excel_to_mysql(excel_file_path, db_config, table_name="nome_tabela_mysql")
-Execute o script a partir do seu terminal (preferencialmente Anaconda Prompt se você usa Conda) com python import_excel_to_mysql.py.
+Para usuários que desejam apenas rodar o aplicativo sem se preocupar com Python ou dependências:
 
-Objetivo Geral do Projeto:
-O objetivo principal deste projeto é fornecer ferramentas Python flexíveis e automatizadas para facilitar o fluxo de dados entre planilhas Excel e bancos de dados MySQL. Seja para gerar relatórios personalizados ou para importar conjuntos de dados variados, esses scripts eliminam a necessidade de manipulação manual e codificação fixa, tornando a gestão de dados mais eficiente e menos propensa a erros.
+1.  **Baixe os arquivos:**
+    * Vá para a seção [**Releases**](https://github.com/JoaoVieiraZP/dados/releases) do repositório no GitHub.
+    * Baixe a última versão do arquivo `app_gui.exe` e, se desejar manter suas configurações de DB, o arquivo `db_config.json` (se já tiver sido gerado na sua máquina).
+2.  **Organize os arquivos:**
+    * Crie uma nova pasta em seu computador para o aplicativo (ex: `Sincronizador Dados`).
+    * Coloque o `app_gui.exe` dentro desta pasta.
+    * **Importante:** Se você já usou o aplicativo antes e quer manter suas configurações de banco de dados, copie seu `db_config.json` pessoal para esta mesma pasta. Caso contrário, o aplicativo criará um novo na primeira vez que você salvar as configurações.
+3.  **Execute o aplicativo:**
+    * Clique duas vezes em `app_gui.exe`.
+
+**Requisito Crucial:** O computador onde o aplicativo será executado deve ter um **servidor MySQL (como XAMPP, WAMP, MySQL Workbench, etc.) instalado e rodando** e acessível pelo aplicativo (ex: no `localhost` ou em um IP de rede). O aplicativo apenas se conecta ao servidor, ele não o instala.
+
+## Como Rodar o Código Fonte (Para Desenvolvedores/Colaboradores)
+
+Se você deseja explorar o código, desenvolver ou colaborar:
+
+1.  **Clone o Repositório:**
+    ```bash
+    git clone [https://github.com/JoaoVieiraZP/dados.git](https://github.com/JoaoVieiraZP/dados.git) my-project-name
+    cd my-project-name
+    ```
+2.  **Crie e Ative o Ambiente Conda (Recomendado):**
+    ```bash
+    conda create -n rstudio python=3.9
+    conda activate rstudio
+    ```
+3.  **Instale as Dependências Python:**
+    ```bash
+    pip install mysql-connector-python pandas openpyxl customtkinter
+    ```
+4.  **Execute o Aplicativo:**
+    ```bash
+    python src/app_gui.py
+    ```
+    * Na primeira execução, o aplicativo gerará um arquivo `db_config.json` na raiz da pasta do projeto após você salvar as configurações do banco de dados na interface.
+
+## Melhorias Futuras
+
+* **Mapeamento de Colunas Avançado:** Permitir que o usuário defina mapeamentos personalizados de colunas e tipos de dados durante a importação.
+* **Mais Modos de Importação:** Implementar modos como UPSERT (Atualizar/Inserir) ou UPDATE ONLY.
+* **Gerenciamento de Erros Aprimorado:** Log de erros para um arquivo e notificação mais detalhada na GUI.
+* **Suporte a Outros Bancos de Dados:** Expandir a compatibilidade para PostgreSQL, SQLite, etc.
+* **Internacionalização (i18n):** Adicionar suporte a múltiplos idiomas.
+
+## Contato
+
+Sinta-se à vontade para entrar em contato se tiver dúvidas ou sugestões!
+
+* **João Pedro Vieira Pereira**
+* [GitHub](https://github.com/JoaoVieiraZP)
+* [LinkedIn](https://www.linkedin.com/in/jo%C3%A3o-pedro-vieira-pereira-7aab772b1/)
+
+---
