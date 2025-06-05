@@ -31,26 +31,6 @@ Com uma interface gráfica (GUI) moderna e intuitiva, o aplicativo elimina a nec
 * **`threading`**: Para operações assíncronas e interface responsiva.
 * **`json`**: Para persistência de configurações.
 
-## Estrutura do Projeto
-
-my-project-name/
-├── .git/                  # Metadados do Git
-├── dist/
-│   ├── app_gui.exe        # Executável do aplicativo
-│   ├── db_config.json     # Configuração da conexão com o banco de dados
-│   ├── tabela_teste.xlsx  # Tabela para teste 1
-│   └── tabela_teste2.xlsx # Tabela para teste 2
-├── examples/              # Arquivos Excel de exemplo para teste
-│   ├── tabela_teste.xlsx  # Tabela para teste
-│   └── tabela_teste2.xlsx # Tabela para teste 2
-├── src/                   # Contém todo o código fonte Python da aplicação
-│   ├── app_gui.py         # Script principal da interface gráfica
-│   ├── db_config.json     # Configuração da conexão com o banco de dados
-│   ├── EXCELparaSQL.py    # Lógica de importação de Excel para MySQL
-│   └── SQLparaEXCEL.py    # Lógica de exportação de MySQL para Excel
-├── README.md              # Este arquivo
-
-
 ## Como Usar o Aplicativo (Para Usuários Finais - Sem Python)
 
 Para usuários que desejam apenas rodar o aplicativo sem se preocupar com Python ou dependências:
